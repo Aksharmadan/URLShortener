@@ -3,7 +3,10 @@ const { nanoid } = require("nanoid");
 const db = require("../db/database");
 const redis = require("../utils/redisClient");
 
-const BASE_URL = "http://localhost:5050";
+const BASE_URL =
+  process.env.BASE_URL || "https://urlshortener-xxtz.onrender.com";
+
+
 
 const router = express.Router();
 
