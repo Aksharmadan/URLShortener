@@ -1,12 +1,10 @@
 const express = require("express");
 const { nanoid } = require("nanoid");
-const db = require("../db/database");
+const db = require("../db/database"); // optional fallback
 const redis = require("../utils/redisClient");
 
 const BASE_URL =
   process.env.BASE_URL || "https://urlshortener-xxtz.onrender.com";
-
-
 
 const router = express.Router();
 
@@ -15,8 +13,10 @@ function isValidUrl(url) {
   return /^https?:\/\//i.test(url);
 }
 
-/* CREATE SHORT URL */
-router.post("/shorten", (req, res) => {
+/* ===========================
+   CREATE SHORT URL
+=========================== */
+router.post("/shorten", async (req, res) => {
   try {
     const { originalUrl, customCode, expiresIn } = req.body;
 
@@ -31,23 +31,39 @@ router.post("/shorten", (req, res) => {
     }
 
     const shortCode = customCode || nanoid(6);
-    let expiresAt = null;
+    let ttlSeconds = null;
 
     if (expiresIn) {
-      expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+      ttlSeconds = Number(expiresIn);
     }
 
-    const existing = db
-      .prepare("SELECT 1 FROM urls WHERE short_code = ?")
-      .get(shortCode);
-
-    if (existing) {
+    /* 🔴 REDIS = SOURCE OF TRUTH */
+    const exists = await redis.get(shortCode);
+    if (exists) {
       return res.status(409).json({ error: "Short code already exists" });
     }
 
-    db.prepare(
-      "INSERT INTO urls (short_code, original_url, expires_at) VALUES (?, ?, ?)"
-    ).run(shortCode, originalUrl, expiresAt);
+    // Save to Redis
+    if (ttlSeconds) {
+      await redis.set(shortCode, originalUrl, { EX: ttlSeconds });
+    } else {
+      await redis.set(shortCode, originalUrl);
+    }
+
+    /* 🟡 Optional: save to SQLite (local dev / analytics only) */
+    try {
+      db.prepare(
+        "INSERT INTO urls (short_code, original_url, expires_at) VALUES (?, ?, ?)"
+      ).run(
+        shortCode,
+        originalUrl,
+        ttlSeconds
+          ? new Date(Date.now() + ttlSeconds * 1000).toISOString()
+          : null
+      );
+    } catch (e) {
+      // ignore DB errors in production
+    }
 
     res.json({
       shortUrl: `${BASE_URL}/${shortCode}`,
@@ -58,38 +74,36 @@ router.post("/shorten", (req, res) => {
   }
 });
 
-/* REDIRECT */
+/* ===========================
+   REDIRECT SHORT URL
+=========================== */
 router.get("/:code", async (req, res) => {
   try {
-    const code = req.params.code;
+    const { code } = req.params;
 
-    // 🔹 Try Redis cache if enabled
-    if (redis) {
-      const cached = await redis.get(code);
-      if (cached) return res.redirect(cached);
+    /* 🔴 1. REDIS FIRST */
+    const cachedUrl = await redis.get(code);
+    if (cachedUrl) {
+      return res.redirect(cachedUrl);
     }
 
+    /* 🟡 2. DB FALLBACK (local only) */
     const row = db
       .prepare(
         "SELECT original_url, expires_at FROM urls WHERE short_code = ?"
       )
       .get(code);
 
-    if (!row) return res.status(404).send("URL not found");
+    if (!row) {
+      return res.status(404).send("URL not found");
+    }
 
     if (row.expires_at && new Date(row.expires_at) < new Date()) {
       return res.status(410).send("This link has expired");
     }
 
-    // 🔹 Store in Redis cache (if enabled)
-    if (redis) {
-      await redis.set(code, row.original_url);
-    }
-
-    // 🔹 Track click
-    db.prepare(
-      "INSERT INTO clicks (short_code, user_agent, ip) VALUES (?, ?, ?)"
-    ).run(code, req.headers["user-agent"], req.ip);
+    // Re-cache in Redis
+    await redis.set(code, row.original_url);
 
     res.redirect(row.original_url);
   } catch (err) {
