@@ -1,14 +1,18 @@
 const { createClient } = require("redis");
 
-const redisClient = createClient();
+let redisClient = null;
 
-(async () => {
-  await redisClient.connect();
-  console.log("Redis connected");
-})();
+if (process.env.REDIS_ENABLED === "true") {
+  redisClient = createClient();
 
-redisClient.on("error", (err) => {
-  console.error("Redis error:", err);
-});
+  redisClient.connect().catch((err) => {
+    console.log("Redis connection failed, continuing without Redis");
+    redisClient = null;
+  });
+
+  redisClient.on("error", (err) => {
+    console.log("Redis error:", err.message);
+  });
+}
 
 module.exports = redisClient;
