@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useEffect } from "react";
 import Particles from "@tsparticles/react";
-import type { Engine, ISourceOptions } from "@tsparticles/engine";
 import { loadSlim } from "@tsparticles/slim";
+import { tsParticles } from "@tsparticles/engine";
+import type { ISourceOptions } from "@tsparticles/engine";
 
 export default function ParticleBackground() {
-  const init = useCallback(async (engine: Engine) => {
-    await loadSlim(engine);
+  useEffect(() => {
+    loadSlim(tsParticles);
   }, []);
 
   const options: ISourceOptions = {
@@ -56,8 +57,6 @@ export default function ParticleBackground() {
 
   return (
     <Particles
-      id="tsparticles"
-      init={init}
       options={options}
       className="absolute inset-0 -z-10"
     />
