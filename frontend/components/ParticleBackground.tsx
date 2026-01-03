@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback } from "react";
 import Particles from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
@@ -22,7 +23,9 @@ export default function ParticleBackground() {
         particles: {
           number: {
             value: 80,
-            density: { enable: true, area: 800 },
+            density: {
+              area: 800,   // ❌ enable removed (THIS WAS THE BUG)
+            },
           },
           color: {
             value: ["#8b5cf6", "#ec4899", "#6366f1"],
@@ -37,7 +40,9 @@ export default function ParticleBackground() {
             enable: true,
             speed: 0.4,
             direction: "none",
-            outModes: "out",
+            outModes: {
+              default: "out",
+            },
           },
         },
         interactivity: {
