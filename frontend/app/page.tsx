@@ -6,6 +6,9 @@ import ParticleBackground from "../components/ParticleBackground";
 import GradientMesh from "../components/GradientMesh";
 import Spotlight from "../components/Spotlight";
 
+// 🔥 HARD-CODE BACKEND (NO ENV DRAMA)
+const API_BASE = "https://urlshortener-xxtz.onrender.com";
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [custom, setCustom] = useState("");
@@ -33,20 +36,28 @@ export default function Home() {
     };
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE}/api/shorten`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/shorten`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      // 🔥 SAFETY: if backend sends HTML (404 etc)
+      const text = await res.text();
+      let data: any;
 
-      // ✅ FINAL SHORT URL (NO JUGAAD)
-      const fullShortUrl = `${process.env.NEXT_PUBLIC_API_BASE}/api/${data.shortCode}`;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Backend error (not JSON). Check API route.");
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to shorten URL");
+      }
+
+      // ✅ FINAL SHORT URL
+      const fullShortUrl = `${API_BASE}/api/${data.shortCode}`;
       setShort(fullShortUrl);
     } catch (e: any) {
       setError(e.message);
@@ -122,6 +133,7 @@ export default function Home() {
             <a
               href={short}
               target="_blank"
+              rel="noreferrer"
               className="text-blue-400 underline break-all"
             >
               {short}
