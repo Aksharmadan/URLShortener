@@ -16,57 +16,42 @@ export default function Home() {
   const [short, setShort] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+const shorten = async () => {
+  setLoading(true);
+  setError("");
+  setShort("");
 
-  const shorten = async () => {
-    setLoading(true);
-    setError("");
-    setShort("");
-
-    const payload = {
-      originalUrl: url,
-      customCode: custom || undefined,
-      expiresIn:
-        expires === "1h"
-          ? 3600
-          : expires === "1d"
-          ? 86400
-          : expires === "7d"
-          ? 604800
-          : null,
-    };
-
-    try {
-     const res = await fetch(`${API_BASE}/shorten`, {
-
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      // 🔥 SAFETY: if backend sends HTML (404 etc)
-      const text = await res.text();
-      let data: any;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("Backend error (not JSON). Check API route.");
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to shorten URL");
-      }
-
-      // ✅ FINAL SHORT URL
-   const fullShortUrl = `${API_BASE}/${data.shortCode}`;
-
-      setShort(fullShortUrl);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    originalUrl: url,
+    customCode: custom || undefined,
+    expiresIn:
+      expires === "1h"
+        ? 3600
+        : expires === "1d"
+        ? 86400
+        : expires === "7d"
+        ? 604800
+        : null,
   };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shorten`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    setShort(`${API_BASE}/api/${data.shortCode}`);
+  } catch (e: any) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <main className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
