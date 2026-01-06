@@ -60,8 +60,9 @@ router.get("/:code", async (req, res) => {
     if (redis?.isOpen) {
       const cached = await redis.get(code);
       if (cached) {
-        return res.redirect(cached);
-      }
+  return res.redirect(301, cached);
+}
+
     }
 
     const row = db
@@ -82,7 +83,8 @@ router.get("/:code", async (req, res) => {
       await redis.set(code, row.original_url);
     }
 
-    return res.redirect(row.original_url);
+return res.redirect(301, row.original_url);
+
   } catch (err) {
     console.error("❌ Redirect error:", err);
     return res.status(500).send("Internal server error");
