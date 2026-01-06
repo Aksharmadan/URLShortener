@@ -34,7 +34,7 @@ export default function Home() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE}/shorten`,
+        `${process.env.NEXT_PUBLIC_API_BASE}/api/shorten`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -45,12 +45,8 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
 
-      // 🔥 BUILD FULL SHORT URL HERE (IMPORTANT)
-      const fullShortUrl = `${process.env.NEXT_PUBLIC_API_BASE.replace(
-        "/api",
-        ""
-      )}/api/${data.shortCode}`;
-
+      // ✅ FINAL SHORT URL (NO JUGAAD)
+      const fullShortUrl = `${process.env.NEXT_PUBLIC_API_BASE}/api/${data.shortCode}`;
       setShort(fullShortUrl);
     } catch (e: any) {
       setError(e.message);
