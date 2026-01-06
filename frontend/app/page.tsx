@@ -36,7 +36,8 @@ export default function Home() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/api/shorten`, {
+  const res = await fetch(`${API_BASE}/shorten`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -57,7 +58,8 @@ export default function Home() {
       }
 
       // ✅ FINAL SHORT URL
-      const fullShortUrl = `${API_BASE}/api/${data.shortCode}`;
+    const fullShortUrl = `${API_BASE}/${data.shortCode}`;
+
       setShort(fullShortUrl);
     } catch (e: any) {
       setError(e.message);
