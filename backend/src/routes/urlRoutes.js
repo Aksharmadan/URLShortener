@@ -3,9 +3,6 @@ const { nanoid } = require("nanoid");
 const db = require("../db/database");
 const redis = require("../utils/redisClient");
 
-const BASE_URL =
-  process.env.BASE_URL || "https://urlshortener-xxtz.onrender.com";
-
 const router = express.Router();
 
 /* SIMPLE URL VALIDATION */
@@ -16,16 +13,15 @@ function isValidUrl(url) {
 /* CREATE SHORT URL */
 router.post("/shorten", (req, res) => {
   try {
-    const { originalUrl, customCode, expiresIn } = req.body;
+    let { originalUrl, customCode, expiresIn } = req.body;
 
     if (!originalUrl) {
       return res.status(400).json({ error: "URL is required" });
     }
 
+    // 🔥 SAFETY: auto add https if missing
     if (!isValidUrl(originalUrl)) {
-      return res.status(400).json({
-        error: "Invalid URL. Must start with http:// or https://",
-      });
+      originalUrl = "https://" + originalUrl;
     }
 
     const shortCode = customCode || nanoid(6);
@@ -47,9 +43,8 @@ router.post("/shorten", (req, res) => {
       "INSERT INTO urls (short_code, original_url, expires_at) VALUES (?, ?, ?)"
     ).run(shortCode, originalUrl, expiresAt);
 
-    return res.json({
-      shortUrl: `${BASE_URL}/${shortCode}`,
-    });
+    // 🔥 IMPORTANT: return ONLY shortCode
+    return res.json({ shortCode });
   } catch (err) {
     console.error("❌ Shorten error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -59,12 +54,14 @@ router.post("/shorten", (req, res) => {
 /* REDIRECT */
 router.get("/:code", async (req, res) => {
   try {
-    const code = req.params.code;
+    const { code } = req.params;
 
-    // 🔹 Redis ONLY if connected
+    // 🔹 Redis cache
     if (redis?.isOpen) {
       const cached = await redis.get(code);
-      if (cached) return res.redirect(cached);
+      if (cached) {
+        return res.redirect(cached);
+      }
     }
 
     const row = db
@@ -73,7 +70,9 @@ router.get("/:code", async (req, res) => {
       )
       .get(code);
 
-    if (!row) return res.status(404).send("URL not found");
+    if (!row) {
+      return res.status(404).send("URL not found");
+    }
 
     if (row.expires_at && new Date(row.expires_at) < new Date()) {
       return res.status(410).send("This link has expired");
@@ -83,10 +82,10 @@ router.get("/:code", async (req, res) => {
       await redis.set(code, row.original_url);
     }
 
-    res.redirect(row.original_url);
+    return res.redirect(row.original_url);
   } catch (err) {
     console.error("❌ Redirect error:", err);
-    res.status(500).send("Internal server error");
+    return res.status(500).send("Internal server error");
   }
 });
 
