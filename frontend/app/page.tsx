@@ -23,27 +23,35 @@ export default function Home() {
       originalUrl: url,
       customCode: custom || undefined,
       expiresIn:
-        expires === "1h" ? 3600 :
-        expires === "1d" ? 86400 :
-        expires === "7d" ? 604800 :
-        null
+        expires === "1h"
+          ? 3600
+          : expires === "1d"
+          ? 86400
+          : expires === "7d"
+          ? 604800
+          : null,
     };
 
     try {
       const res = await fetch(
-  `${process.env.NEXT_PUBLIC_API_BASE}/shorten`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }
-);
-
-      
+        `${process.env.NEXT_PUBLIC_API_BASE}/shorten`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setShort(data.shortUrl);
+      if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+      // 🔥 BUILD FULL SHORT URL HERE (IMPORTANT)
+      const fullShortUrl = `${process.env.NEXT_PUBLIC_API_BASE.replace(
+        "/api",
+        ""
+      )}/api/${data.shortCode}`;
+
+      setShort(fullShortUrl);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -58,27 +66,11 @@ export default function Home() {
       <Spotlight />
 
       <motion.div
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left - rect.width / 2;
-          const y = e.clientY - rect.top - rect.height / 2;
-
-          e.currentTarget.style.transform = `
-            perspective(1000px)
-            rotateX(${(-y / 25)}deg)
-            rotateY(${(x / 25)}deg)
-          `;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform =
-            "perspective(1000px) rotateX(0deg) rotateY(0deg)";
-        }}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
         className="relative bg-white/10 backdrop-blur-xl p-10 rounded-2xl border border-white/20 w-[460px]
-                   shadow-[0_0_120px_rgba(168,85,247,0.35)]
-                   transition-transform duration-200 ease-out"
+                   shadow-[0_0_120px_rgba(168,85,247,0.35)]"
       >
         <h1 className="text-4xl font-bold text-center mb-2">
           URL Shortener
@@ -88,23 +80,23 @@ export default function Home() {
         </p>
 
         <input
-          className="w-full p-3 mb-3 rounded bg-black/40 border border-white/20 focus:ring-2 focus:ring-purple-500 outline-none"
+          className="w-full p-3 mb-3 rounded bg-black/40 border border-white/20"
           placeholder="Paste long URL..."
           value={url}
-          onChange={e => setUrl(e.target.value)}
+          onChange={(e) => setUrl(e.target.value)}
         />
 
         <input
-          className="w-full p-3 mb-3 rounded bg-black/40 border border-white/20 focus:ring-2 focus:ring-pink-500 outline-none"
+          className="w-full p-3 mb-3 rounded bg-black/40 border border-white/20"
           placeholder="Custom alias (optional)"
           value={custom}
-          onChange={e => setCustom(e.target.value)}
+          onChange={(e) => setCustom(e.target.value)}
         />
 
         <select
           className="w-full p-3 mb-4 rounded bg-black/40 border border-white/20"
           value={expires}
-          onChange={e => setExpires(e.target.value)}
+          onChange={(e) => setExpires(e.target.value)}
         >
           <option value="">No expiry</option>
           <option value="1h">Expires in 1 hour</option>
@@ -117,7 +109,7 @@ export default function Home() {
           whileTap={{ scale: 0.97 }}
           onClick={shorten}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 py-3 rounded font-semibold shadow-lg"
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 py-3 rounded font-semibold"
         >
           {loading ? "Shortening..." : "Shorten URL"}
         </motion.button>
@@ -129,11 +121,7 @@ export default function Home() {
         )}
 
         {short && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 bg-black/40 p-4 rounded border border-white/10 text-center"
-          >
+          <div className="mt-6 bg-black/40 p-4 rounded border border-white/10 text-center">
             <p className="text-sm text-gray-400 mb-1">Your short link</p>
             <a
               href={short}
@@ -142,7 +130,7 @@ export default function Home() {
             >
               {short}
             </a>
-          </motion.div>
+          </div>
         )}
       </motion.div>
     </main>
