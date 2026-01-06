@@ -16,6 +16,8 @@ export default function Home() {
   const [short, setShort] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  
 const shorten = async () => {
   setLoading(true);
   setError("");
@@ -52,6 +54,7 @@ const shorten = async () => {
   }
 };
 
+ 
 
   return (
     <main className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
