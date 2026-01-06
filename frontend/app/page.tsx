@@ -6,7 +6,8 @@ import ParticleBackground from "../components/ParticleBackground";
 import GradientMesh from "../components/GradientMesh";
 import Spotlight from "../components/Spotlight";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+// 🔥 HARD-CODE BACKEND (NO ENV DRAMA)
+const API_BASE = "https://urlshortener-xxtz.onrender.com";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -35,14 +36,16 @@ export default function Home() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/api/shorten`, {
+     const res = await fetch(`${API_BASE}/shorten`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
+      // 🔥 SAFETY: if backend sends HTML (404 etc)
       const text = await res.text();
-      let data;
+      let data: any;
 
       try {
         data = JSON.parse(text);
@@ -50,11 +53,16 @@ export default function Home() {
         throw new Error("Backend error (not JSON). Check API route.");
       }
 
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to shorten URL");
+      }
 
-      setShort(`${API_BASE}/api/${data.shortCode}`);
-    } catch (err: any) {
-      setError(err.message);
+      // ✅ FINAL SHORT URL
+   const fullShortUrl = `${API_BASE}/${data.shortCode}`;
+
+      setShort(fullShortUrl);
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -67,29 +75,15 @@ export default function Home() {
       <Spotlight />
 
       <motion.div
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left - rect.width / 2;
-          const y = e.clientY - rect.top - rect.height / 2;
-
-          e.currentTarget.style.transform = `
-            perspective(1000px)
-            rotateX(${(-y / 25)}deg)
-            rotateY(${(x / 25)}deg)
-          `;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform =
-            "perspective(1000px) rotateX(0deg) rotateY(0deg)";
-        }}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
         className="relative bg-white/10 backdrop-blur-xl p-10 rounded-2xl border border-white/20 w-[460px]
-                   shadow-[0_0_120px_rgba(168,85,247,0.35)]
-                   transition-transform duration-200 ease-out"
+                   shadow-[0_0_120px_rgba(168,85,247,0.35)]"
       >
-        <h1 className="text-4xl font-bold text-center mb-2">URL Shortener</h1>
+        <h1 className="text-4xl font-bold text-center mb-2">
+          URL Shortener
+        </h1>
         <p className="text-gray-400 text-center mb-6">
           Clean links · Analytics · Fast redirects
         </p>
@@ -130,24 +124,23 @@ export default function Home() {
         </motion.button>
 
         {error && (
-          <p className="text-red-400 text-sm mt-4 text-center">{error}</p>
+          <p className="text-red-400 text-sm mt-4 text-center">
+            {error}
+          </p>
         )}
 
         {short && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 bg-black/40 p-4 rounded border border-white/10 text-center"
-          >
+          <div className="mt-6 bg-black/40 p-4 rounded border border-white/10 text-center">
             <p className="text-sm text-gray-400 mb-1">Your short link</p>
             <a
               href={short}
               target="_blank"
+              rel="noreferrer"
               className="text-blue-400 underline break-all"
             >
               {short}
             </a>
-          </motion.div>
+          </div>
         )}
       </motion.div>
     </main>
