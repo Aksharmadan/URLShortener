@@ -6,8 +6,13 @@ require("./db/database");
 
 const app = express();
 
-/* ---------- MIDDLEWARE ---------- */
-app.use(cors({ origin: "*" }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+  })
+);
+
 app.use(express.json());
 
 app.use(
@@ -17,22 +22,10 @@ app.use(
   })
 );
 
-/* ---------- HEALTH ---------- */
-app.get("/", (req, res) => {
-  res.send("URL Shortener Backend Running");
-});
+app.use("/", require("./routes/urlRoutes"));
 
-/* ---------- ROUTES ---------- */
-const urlRoutes = require("./routes/urlRoutes");
-
-/* API route */
-app.use("/api", urlRoutes);
-
-/* REDIRECT MUST BE ROOT */
-app.use("/", urlRoutes);
-
-/* ---------- SERVER ---------- */
 const PORT = process.env.PORT || 5050;
+
 app.listen(PORT, () => {
-  console.log("✅ Backend running on port", PORT);
+  console.log("Backend running on port", PORT);
 });
