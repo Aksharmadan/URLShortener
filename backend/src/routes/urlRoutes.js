@@ -5,12 +5,12 @@ const redis = require("../utils/redisClient");
 
 const router = express.Router();
 
-/* SIMPLE URL VALIDATION */
+/* ---------------- URL VALIDATION ---------------- */
 function isValidUrl(url) {
   return /^https?:\/\//i.test(url);
 }
 
-/* CREATE SHORT URL */
+/* ---------------- CREATE SHORT URL ---------------- */
 router.post("/shorten", (req, res) => {
   try {
     let { originalUrl, customCode, expiresIn } = req.body;
@@ -19,16 +19,16 @@ router.post("/shorten", (req, res) => {
       return res.status(400).json({ error: "URL is required" });
     }
 
-    // 🔥 SAFETY: auto add https if missing
+    // ✅ Auto-fix missing protocol
     if (!isValidUrl(originalUrl)) {
       originalUrl = "https://" + originalUrl;
     }
 
-    const shortCode = customCode || nanoid(6);
+    const shortCode = customCode?.trim() || nanoid(6);
     let expiresAt = null;
 
     if (expiresIn) {
-      expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+      expiresAt = new Date(Date.now() + Number(expiresIn) * 1000).toISOString();
     }
 
     const existing = db
@@ -43,7 +43,7 @@ router.post("/shorten", (req, res) => {
       "INSERT INTO urls (short_code, original_url, expires_at) VALUES (?, ?, ?)"
     ).run(shortCode, originalUrl, expiresAt);
 
-    // 🔥 IMPORTANT: return ONLY shortCode
+    // ✅ Frontend will build full URL itself
     return res.json({ shortCode });
   } catch (err) {
     console.error("❌ Shorten error:", err);
@@ -51,12 +51,12 @@ router.post("/shorten", (req, res) => {
   }
 });
 
-/* REDIRECT */
+/* ---------------- REDIRECT ---------------- */
 router.get("/:code", async (req, res) => {
   try {
     const { code } = req.params;
 
-    // 🔹 Redis cache
+    // ✅ Redis cache (optional)
     if (redis?.isOpen) {
       const cached = await redis.get(code);
       if (cached) {
